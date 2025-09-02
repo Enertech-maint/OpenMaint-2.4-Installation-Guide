@@ -1,0 +1,251 @@
+## [Step 0] - Preparations!
+Before actually doing anything, just make sure that your apt is up to date so we don't run into any issues later on.<br>
+Also, install unzip.
+```shell
+$ sudo apt-get update -y
+```
+```shell
+$ sudo apt-get upgrade
+```
+```shell
+$ sudo apt install unzip
+```
+
+**NOTE: If you get a permission denied error anywhere during this installation, just sudo it.**
+<br>
+<br>
+
+## [Step 1] - Installing Java
+Now that that's covered, lets go ahead and install java. We need to install Java 17 specifically
+```shell
+$ sudo apt-get install openjdk-17-jdk
+```
+
+Once that's done, just use `java -version` to make sure it is installed. Something like this should come up.
+```shell
+openjdk version "17.0.7" 2023-04-18
+OpenJDK Runtime Environment (build 17.0.7+7-Ubuntu-0ubuntu122.04.2)
+OpenJDK 64-Bit Server VM (build 17.0.7+7-Ubuntu-0ubuntu122.04.2, mixed mode, sharing)
+```
+
+## [Step 2] - Installing PostgreSQL 17
+⠀⠀⠀⠀OpenMAINT uses PostgreSQL in order to store inventory, maintenance, and general data, so we're going to have to install it now. Every version after PostgreSQL 12+ is known to break openMAINT, so we're using version 12 (Besides, the dumps are of a.v 1.14). Also, to add to the fun you're currently having, Ubuntu 20.04 doesn't have PostgreSQL 12 in its repository, so we have to add it manually. Nice, right?<br>
+&nbsp;  
+⠀⠀⠀⠀First off, we need to import the repository signing key, so ubuntu knows what repo we're asking for. After running the command, if the output is "OK" you're good to go.
+```shell
+$ wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+```
+<br>
+
+Now that the signing keys are added, we need to add the actual repository and refresh the apt data. If you get a permission denied error on this one, it's okay. <br>
+```shell
+$ echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/postgresql-pgdg.list &gt; /dev/null
+```
+```shell
+$ sudo apt-get update
+```
+<br>
+
+At last, PostgreSQL is ready to be installed. Now we just have to run a simple command, and that's it.
+```shell
+$ sudo apt-get install postgresql-12
+```
+<br>
+
+**NOTE:** If you want to have support for geographical location data in openMAINT, you will need to install PostGIS. Luckily, by this point, you should have all the references needed to install it straight on like this:
+```shell
+$ sudo apt install postgresql-12-postgis-3 libpostgis-java
+```
+
+## [Step 3] - Configuring PostgreSQL
+Now into the PostgreSQL configuration. Lets first configure PostgreSQ'S credentials: For this, start by logging into PostgreSQL and manually sending a query to change the password.
+
+**Warning**: Please keep your passwords alphanumeric!
+
+```shell
+$ sudo passwd postgres
+$ sudo usermod -aG sudo postgres
+```
+```shell
+$ sudo -u postgres psql template1
+```
+```sql
+# Change the 'postgres' user password (superuser password)
+ALTER USER postgres WITH PASSWORD 'PSSWD'; 
+
+# Quit the SQL console
+\q
+```
+## [Step 4] - Installing Alfresco Community Management
+Don't ask me why this is needed or what a DMS/CMIS is, I just know that it's something to do with reports and content, but I don't really get it. Either way, we need it, so lets proceed to the installation. First off, download the alfresco installer, change its permissions to allow it to be run, and run it.
+```shell
+$ wget http://dl.alfresco.com/release/community/build-3370/alfresco-community-3.4.d-installer-linux-x64.bin
+$ chmod a+x alfresco-community-3.4.d-installer-linux-x64.bin
+$ sudo ./alfresco-community-3.4.d-installer-linux-x64.bin --mode text
+```
+
+After that, run the installer with the following settings:
+- Choose 'English' (Type in 1)
+- Accept SharePoint, Records Management, Web Quick Start and Web Project Manager
+- Select an Installation Type 1
+- Leave the installation folder as default
+- Select the bundled MySQL database (Type in 1)
+- Create the database password (Just type them in)
+- Create Alfresco's password (Just type them in)
+- **Decline** the installation as a service (It breaks anyways, so we're handling it ourselves.)
+<br>
+
+Now, we need to make sure that alfresco isn't running, since we still need to setup its bundled tomcat server. Navigate to `/opt/alfresco-3.4` and stop the service if its running.
+```shell
+$ cd /opt/alfresco-3.4.d
+$ sudo ./alfresco.sh status
+
+# IF ITS RUNNING
+$ sudo ./alfresco.sh stop
+```
+
+Great! Now, lets open alfresco tomcat's `server.xml` file, and edit the server ports. Change every defined port to the next highest number, so we can avoid conflicts with openMAINT's tomcat ports.
+```shell
+$ sudo nano tomcat/conf/server.xml
+```
+```xml
+// Line 22
+<Server port="8006" shutdown="SHUTDOWN">
+
+// Line 69 (lol)
+<Connector port="8081" URIEncoding="UTF-8" protocol="HTTP/1.1" 
+               connectionTimeout="20000" 
+               redirectPort="8443" />
+```
+Now, alfresco is pretty much set up. Lets go and boot it up, and proceed to the openMAINT installation. (We still need to configure it, but that comes later on).
+```shell
+$ sudo ./alfresco.sh start
+```
+
+## [Step 5] - Installing GeoServer
+Now then, lets go and install the GeoServer - This one is really easy so just follow along.
+```shell
+$ sudo adduser geoserver ; sudo usermod -aG sudo geoserver ; sudo su - geoserver
+```
+```shell
+$ wget https://sourceforge.net/projects/geoserver/files/GeoServer/2.21.0/geoserver-2.21.0-bin.zip
+```
+Now just extract it to the home directory, and edit the port it is hosted on...
+```shell
+$ unzip -d /home/geoserver/server geoserver-2.21.0-bin.zip
+```
+```shell
+$ nano /home/geoserver/server/start.ini
+```
+Just scroll down now and replace the `jetty.http.port` setting with `jetty.http.port=8082`. When you're finished, press `Ctrl+X`, `Y` and `ENTER` to save.<br>
+Lets just add the GeoServer as a service so that we don't have to worry about it anymore...
+```shell
+$ sudo nano /usr/lib/systemd/system/geoserver.service
+```
+```bash
+[Unit]
+Description=GeoServer Service
+After=network.target
+
+[Service]
+Type=simple
+
+User=root
+
+Environment="GEOSERVER_HOME=/home/geoserver/server"
+
+ExecStart=/home/geoserver/server/bin/startup.sh
+ExecStop=/home/geoserver/server/bin/shutdown.sh
+
+[Install]
+WantedBy=multi-user.target
+```
+When you're done, press `Ctrl+X`, `Y` and `ENTER` to save...
+```shell
+$ sudo systemctl daemon-reload
+$ sudo systemctl enable --now geoserver
+```
+And that's that! You can access the GeoServer interface on `http://YOUR-IP:8082/geoserver`, with credentials `admin, geoserver`.
+
+## [Step 6] - Installing openMAINT 2.3
+At last, the system is now ready for the openMAINT installation! First off, lets create an openmaint user for organisation purposes, then we just need to download openMAINT 2.3.
+
+```shell
+$ sudo adduser openmaint ; sudo usermod -aG sudo openmaint ; sudo su - openmaint
+```
+```shell
+$ wget https://downloads.sourceforge.net/project/openmaint/2.3/openmaint-2.3-3.4.1-d.war
+```
+**Make sure that you have installed "openmaint-2.3-3.4.1-d.war". Notice the "-d" at the end!**  
+<br>
+
+Once that's done, run the installation jar, and enter these specific configurations, leaving everything that is not specified as default, and finish the installation by following the instructions displayed in the terminal.
+```shell
+$ java -jar ./openmaint-2.3-3.4.1-d.war install
+```
+```shell
+postrgres admin account: postgres/<PASSWORD-FROM-STEP-3>
+cmdbuild posrgres database name: openmaint_db
+database dump to load: empty
+```
+
+## [Step 7] - Setting up the openMAINT startup & shutdown scripts
+Since starting anything related to Tomcat as a service seems to not work (as far as I've noticed), we're going to have to create a startup and shutdown script to start and shutdown the required apps. Just create a new bash script, make it executable, and you're free to go.
+```shell
+# Use this if you've switched users for some reason
+$ su - openmaint
+
+$ nano startmaint.sh
+```
+Add the following code into the opened file, and press `CTRL+X`, `Y`and `ENTER` to save.
+```shell
+##!/bin/bash
+
+# Alfresco is kind of weird and can get its catalina.pid stuck after shutting,
+# so we have to essentially restart it to get it up and running.
+sudo "/opt/alfresco-3.4.d/alfresco.sh" stop
+sudo rm -f /opt/alfresco-3.4.d/tomcat/temp/catalina.pid
+sudo "/opt/alfresco-3.4.d/alfresco.sh" start
+
+# ... The same is true for openMAINT. This is more of a restart script than a startup script
+# if anything. 
+sudo -u openmaint "/home/openmaint/cmdbuild_30/bin/shutdown.sh"
+sudo rm -f /home/openmaint/cmdbuild_30/bin/catalina.pid
+sudo -u openmaint "/home/openmaint/cmdbuild_30/bin/startup.sh"
+
+echo "------------------> openMAINT Started! <------------------"
+```
+```shell
+$ chmod a+x startmaint.sh
+```
+Do the same for the shutdown script, and again, press `CTRL+X`, `Y`and `ENTER` to save.
+```shell
+$ nano stopmaint.sh
+```
+```shell
+#!/bin/bash
+
+# The shutdown is incredibly more simple...
+sudo "/opt/alfresco-3.4.d/alfresco.sh" stop
+sudo -u openmaint "/home/openmaint/cmdbuild_30/bin/shutdown.sh"
+```
+```shell
+$ chmod a+x stopmaint.sh
+```
+And... That's that! To turn on openMAINT, just use `sudo /home/openmaint/startmaint.sh` **through a sudo-allowed account**, and to turn it off use `sudo /home/openmaint/stopmaint.sh`. Simple!<br>
+To access your app after it turns on, use `http://SERVER-IP:8080/cmdbuild` (`http://localhost:8080/cmdbuild` will probably work).<br>
+Your credentials are `Username: admin`, `Password: admin`.<br>
+Boot openMAINT up, since we'll need it. <br>
+
+## [Step 8] - Connecting Alfresco and openMAINT
+Log into openMAINT and click on the top right corner of the screen, on the small cogwheel near the log out button. This will take you into the administrative menu, where you can change the settings for pretty much everything. Use the navigation menu on the left to scroll down until you find a folder called "DMS" - Open it, hit settings, and [edit](https://user-images.githubusercontent.com/58192513/250899768-c261f4d5-5572-439b-8170-835a22ecd510.png) the "host" field with the following link: `http://YOUR-IP:8081/alfresco/s/cmis`
+<br><br>
+![imagem](https://user-images.githubusercontent.com/58192513/250899094-333afff3-c7e9-43db-8344-1784864be9b9.png)
+
+## [Step 9] - Connecting GIS and openMAINT
+Still in the administration page, navigate to the "GIS" folder and hit "External Services". When you're there, just change the port and IP to `YOURSERV:8082`, not touching anything else, and you're good to go!
+<br><br>
+![imagem](https://user-images.githubusercontent.com/58192513/253228673-a30eb80a-7da5-458a-997a-4e78fb7e645d.png)
+<br>
+<br>
+After you complete this... you're set! Enjoy using openMAINT (Even though learning to use it can be quite tricky, since the documentation is scarce) and have a good one!
