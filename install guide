@@ -27,38 +27,22 @@ $  sudo update-alternatives --config java
 
 Once that's done, just use `java -version` to make sure it is installed. Something like this should come up.
 ```shell
-openjdk version "17.0.7" 2023-04-18
-OpenJDK Runtime Environment (build 17.0.7+7-Ubuntu-0ubuntu122.04.2)
-OpenJDK 64-Bit Server VM (build 17.0.7+7-Ubuntu-0ubuntu122.04.2, mixed mode, sharing)
+openjdk version "17.0.16" 2025-07-15
+OpenJDK Runtime Environment Temurin-17.0.16+8 (build 17.0.16+8)
+OpenJDK 64-Bit Server VM Temurin-17.0.16+8 (build 17.0.16+8, mixed mode, sharing)
 ```
 
 ## [Step 2] - Installing PostgreSQL 17
 ⠀⠀⠀⠀OpenMAINT uses PostgreSQL in order to store inventory, maintenance, and general data, so we're going to have to install it now. Every version after PostgreSQL 12+ is known to break openMAINT, so we're using version 12 (Besides, the dumps are of a.v 1.14). Also, to add to the fun you're currently having, Ubuntu 20.04 doesn't have PostgreSQL 12 in its repository, so we have to add it manually. Nice, right?<br>
-&nbsp;  
-⠀⠀⠀⠀First off, we need to import the repository signing key, so ubuntu knows what repo we're asking for. After running the command, if the output is "OK" you're good to go.
+&nbsp; 
 ```shell
-$ wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
-```
-<br>
-
-Now that the signing keys are added, we need to add the actual repository and refresh the apt data. If you get a permission denied error on this one, it's okay. <br>
-```shell
-$ echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/postgresql-pgdg.list &gt; /dev/null
-```
-```shell
-$ sudo apt-get update
-```
-<br>
-
-At last, PostgreSQL is ready to be installed. Now we just have to run a simple command, and that's it.
-```shell
-$ sudo apt-get install postgresql-12
+$ sudo apt-get install postgresql-17
 ```
 <br>
 
 **NOTE:** If you want to have support for geographical location data in openMAINT, you will need to install PostGIS. Luckily, by this point, you should have all the references needed to install it straight on like this:
 ```shell
-$ sudo apt install postgresql-12-postgis-3 libpostgis-java
+$ sudo apt install postgresql-17-postgis-3 libpostgis-java
 ```
 
 ## [Step 3] - Configuring PostgreSQL
@@ -75,7 +59,7 @@ $ sudo -u postgres psql template1
 ```
 ```sql
 # Change the 'postgres' user password (superuser password)
-ALTER USER postgres WITH PASSWORD 'PSSWD'; 
+ALTER USER postgres WITH PASSWORD 'Enertech7180'; 
 
 # Quit the SQL console
 \q
@@ -94,8 +78,8 @@ After that, run the installer with the following settings:
 - Select an Installation Type 1
 - Leave the installation folder as default
 - Select the bundled MySQL database (Type in 1)
-- Create the database password (Just type them in)
-- Create Alfresco's password (Just type them in)
+- Create the database password (Just type them in) Enertech7180
+- Create Alfresco's password (Just type them in) Enertech7180
 - **Decline** the installation as a service (It breaks anyways, so we're handling it ourselves.)
 <br>
 
