@@ -18,7 +18,11 @@ $ sudo apt install unzip
 ## [Step 1] - Installing Java
 Now that that's covered, lets go ahead and install java. We need to install Java 17 specifically
 ```shell
-$ sudo apt-get install openjdk-17-jdk
+$  wget https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.16%2B8/OpenJDK17U-jdk_x64_linux_hotspot_17.0.16_8.tar.gz
+$  sudo tar -xzf OpenJDK17U-jdk_x64_linux_hotspot_17.0.16_8.tar.gz -C /opt
+$  sudo update-alternatives --install /usr/bin/java java /opt/jdk-17.0.16+8/bin/java 1
+$  sudo update-alternatives --install /usr/bin/javac javac /opt/jdk-17.0.16+8/bin/javac 1
+$  sudo update-alternatives --config java
 ```
 
 Once that's done, just use `java -version` to make sure it is installed. Something like this should come up.
