@@ -155,15 +155,14 @@ $ sudo systemctl enable --now geoserver
 ```
 And that's that! You can access the GeoServer interface on `http://YOUR-IP:8082/geoserver`, with credentials `admin, geoserver`.
 
-## [Step 6] - Installing openMAINT 2.3
+## [Step 6] - Installing openMAINT 2.4
 At last, the system is now ready for the openMAINT installation! First off, lets create an openmaint user for organisation purposes, then we just need to download openMAINT 2.3.
 
 ```shell
 $ sudo adduser openmaint ; sudo usermod -aG sudo openmaint ; sudo su - openmaint
 ```
 ```shell
-$ wget https://downloads.sourceforge.net/project/openmaint/2.3/openmaint-2.3-3.4.1-d.war
-```
+$ wget https://sourceforge.net/projects/openmaint/files/latest/download```
 **Make sure that you have installed "openmaint-2.3-3.4.1-d.war". Notice the "-d" at the end!**  
 <br>
 
